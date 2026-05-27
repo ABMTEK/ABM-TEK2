@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-    // basePath: '/admin',  // re-enable when deploying under /admin
+    basePath: '/admin',
     trailingSlash: true,
 };
 
