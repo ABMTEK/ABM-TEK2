@@ -36,7 +36,7 @@ export default function LoginPage() {
             await login(values.email, values.password);
             router.push("/");
         } catch (err: any) {
-            setError("Invalid email or password. Please try again.");
+            setError(err?.message || "Invalid email or password. Please try again.");
             console.error(err);
         }
     }
