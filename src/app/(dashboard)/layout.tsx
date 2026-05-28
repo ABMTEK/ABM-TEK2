@@ -134,13 +134,10 @@ function SidebarContent({ user, pathname, navItems, onLogout }: any) {
         <div className="flex flex-col h-full" style={{ background: '#1A1A1A' }}>
             {/* Logo + User */}
             <div className="p-6 pb-4 flex flex-col items-center">
-                <Image
-                    src="/logo.png"
+                <img
+                    src="/admin/logo.png"
                     alt="ABM-TEK"
-                    width={112}
-                    height={112}
-                    className="mb-5"
-                    style={{ height: '7rem', width: 'auto' }}
+                    className="h-28 w-auto mb-5"
                 />
                 <div className="flex items-center gap-3 w-full">
                     <Avatar>

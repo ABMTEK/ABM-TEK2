@@ -46,7 +46,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <Card className="w-full max-w-[400px]">
                 <CardHeader className="flex flex-col items-center">
-                    <Image src="/logo.png" alt="ABM Logo" width={160} height={160} className="mb-4" style={{ height: '10rem', width: 'auto', filter: 'drop-shadow(0 0 8px rgba(180,0,0,0.25))' }} />
+                    <img src="/admin/logo.png" alt="ABM Logo" className="h-40 w-auto mb-4" style={{ filter: 'drop-shadow(0 0 8px rgba(180,0,0,0.25))' }} />
                     <CardDescription className="text-center">
                         Login to access your workshop dashboard
                     </CardDescription>
