@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
 import {
     LayoutDashboard,
@@ -133,10 +134,13 @@ function SidebarContent({ user, pathname, navItems, onLogout }: any) {
         <div className="flex flex-col h-full" style={{ background: '#1A1A1A' }}>
             {/* Logo + User */}
             <div className="p-6 pb-4 flex flex-col items-center">
-                <img
+                <Image
                     src="/logo.png"
                     alt="ABM-TEK"
-                    className="h-28 w-auto mb-5"
+                    width={112}
+                    height={112}
+                    className="mb-5"
+                    style={{ height: '7rem', width: 'auto' }}
                 />
                 <div className="flex items-center gap-3 w-full">
                     <Avatar>

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -45,7 +46,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <Card className="w-full max-w-[400px]">
                 <CardHeader className="flex flex-col items-center">
-                    <img src="/logo.png" alt="ABM Logo" className="h-40 w-auto mb-4" style={{ filter: 'drop-shadow(0 0 8px rgba(180,0,0,0.25))' }} />
+                    <Image src="/logo.png" alt="ABM Logo" width={160} height={160} className="mb-4" style={{ height: '10rem', width: 'auto', filter: 'drop-shadow(0 0 8px rgba(180,0,0,0.25))' }} />
                     <CardDescription className="text-center">
                         Login to access your workshop dashboard
                     </CardDescription>
