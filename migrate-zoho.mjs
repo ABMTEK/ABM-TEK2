@@ -170,12 +170,15 @@ async function importInvoices(customerMap) {
 
     const mapStatus = s => {
         switch(s) {
-            case 'paid': return { paymentStatus: 'paid', status: 'approved' };
-            case 'overdue': return { paymentStatus: 'pending', status: 'approved' };
-            case 'unpaid': return { paymentStatus: 'pending', status: 'approved' };
-            case 'partially_paid': return { paymentStatus: 'partially_paid', status: 'approved' };
-            case 'draft': return { paymentStatus: 'pending', status: 'draft' };
-            default: return { paymentStatus: 'pending', status: 'draft' };
+            case 'paid':          return { paymentStatus: 'paid',           status: 'approved' };
+            case 'overdue':       return { paymentStatus: 'pending',        status: 'approved' };
+            case 'unpaid':        return { paymentStatus: 'pending',        status: 'approved' };
+            case 'sent':          return { paymentStatus: 'pending',        status: 'approved' };
+            case 'viewed':        return { paymentStatus: 'pending',        status: 'approved' };
+            case 'partially_paid':return { paymentStatus: 'partially_paid', status: 'approved' };
+            case 'void':          return { paymentStatus: 'pending',        status: 'void'     };
+            case 'draft':         return { paymentStatus: 'pending',        status: 'draft'    };
+            default:              return { paymentStatus: 'pending',        status: 'approved' };
         }
     };
 
