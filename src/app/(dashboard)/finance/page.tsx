@@ -232,23 +232,25 @@ export default function FinanceDashboard() {
                 ))}
             </div>
 
-            {/* Quick stats row */}
+            {/* Quick stats row — clickable */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8">
                 {[
-                    { label: "Total Invoices", value: invoices.length, icon: <FileText className="h-4 w-4" /> },
-                    { label: "Pending Payment", value: invoices.filter(i => i.paymentStatus === "pending").length, icon: <Clock className="h-4 w-4" /> },
-                    { label: "Pending Quotes", value: stats.pendingQuotes, icon: <AlertCircle className="h-4 w-4" /> },
-                    { label: "Draft Invoices", value: stats.draftInvoices, icon: <Wallet className="h-4 w-4" /> },
+                    { label: "Total Invoices", value: invoices.length, icon: <FileText className="h-4 w-4" />, href: "/finance/invoices" },
+                    { label: "Pending Payment", value: invoices.filter(i => i.paymentStatus === "pending").length, icon: <Clock className="h-4 w-4" />, href: "/finance/invoices?payment=pending" },
+                    { label: "Pending Quotes", value: stats.pendingQuotes, icon: <AlertCircle className="h-4 w-4" />, href: "/finance/quotes?status=pending_approval" },
+                    { label: "Draft Invoices", value: stats.draftInvoices, icon: <Wallet className="h-4 w-4" />, href: "/finance/invoices?status=draft" },
                 ].map((s, i) => (
-                    <Card key={i} className="bg-white dark:bg-gray-900 border shadow-sm">
-                        <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-xs text-gray-500 font-medium">{s.label}</p>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{s.value}</p>
-                            </div>
-                            <div className="text-gray-300 dark:text-gray-600">{s.icon}</div>
-                        </CardContent>
-                    </Card>
+                    <Link key={i} href={s.href}>
+                        <Card className="bg-white dark:bg-gray-900 border shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all">
+                            <CardContent className="p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-gray-500 font-medium">{s.label}</p>
+                                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{s.value}</p>
+                                </div>
+                                <div className="text-gray-300 dark:text-gray-600">{s.icon}</div>
+                            </CardContent>
+                        </Card>
+                    </Link>
                 ))}
             </div>
 
