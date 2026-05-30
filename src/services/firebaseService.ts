@@ -43,6 +43,7 @@ import {
   QuoteItem,
   QuoteStatus,
   InvoiceStatus,
+  RestockRequest,
 } from '@/types';
 
 const uploadImageToMethods = async (file: File | Blob, path: string): Promise<string> => {
@@ -360,6 +361,185 @@ export const firebaseService = {
     await updateDoc(docRef, {
       ...data,
       updatedAt: Timestamp.now(),
+    });
+  },
+
+  async deleteInventoryItem(itemId: string): Promise<void> {
+    await deleteDoc(doc(db, 'inventory', itemId));
+  },
+
+  async addStockTransaction(data: Omit<StockTransaction, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'stockTransactions'), {
+      ...data,
+      createdAt: Timestamp.now(),
+    });
+    return docRef.id;
+  },
+
+  async getStockTransactions(workshopId: string, itemId?: string): Promise<StockTransaction[]> {
+    const constraints: QueryConstraint[] = [
+      where('workshopId', '==', workshopId),
+      orderBy('createdAt', 'desc'),
+      limit(50),
+    ];
+    if (itemId) constraints.splice(1, 0, where('itemId', '==', itemId));
+    const q = query(collection(db, 'stockTransactions'), ...constraints);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+      createdAt: d.data().createdAt?.toDate() || new Date(),
+    })) as StockTransaction[];
+  },
+
+  async sendLowStockNotification(workshopId: string, itemName: string, quantity: number, minStockLevel: number, itemId: string): Promise<void> {
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('workshopId', '==', workshopId)
+    );
+    const snapshot = await getDocs(usersQuery);
+    const adminUsers = snapshot.docs.filter(d => {
+      const role = d.data().role;
+      return role === 'admin' || role === 'super_admin';
+    });
+    if (adminUsers.length === 0) return;
+    const batch = writeBatch(db);
+    adminUsers.forEach(u => {
+      const notifRef = doc(collection(db, 'notifications'));
+      batch.set(notifRef, {
+        userId: u.id,
+        title: 'Low Stock Alert',
+        body: `${itemName} is running low — only ${quantity} unit(s) left (min: ${minStockLevel}).`,
+        message: `${itemName} is running low — only ${quantity} unit(s) left (min: ${minStockLevel}).`,
+        type: 'inventory',
+        read: false,
+        metadata: { itemId, itemName, quantity, minStockLevel },
+        createdAt: Timestamp.now(),
+      });
+    });
+    await batch.commit();
+  },
+
+  async createRestockRequest(data: Omit<RestockRequest, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'restockRequests'), {
+      ...data,
+      requestedAt: Timestamp.now(),
+      status: 'pending',
+    });
+    // notify admins
+    const usersQuery = query(collection(db, 'users'), where('workshopId', '==', data.workshopId));
+    const snapshot = await getDocs(usersQuery);
+    const admins = snapshot.docs.filter(d => ['admin', 'super_admin'].includes(d.data().role));
+    if (admins.length > 0) {
+      const batch = writeBatch(db);
+      admins.forEach(u => {
+        const notifRef = doc(collection(db, 'notifications'));
+        batch.set(notifRef, {
+          userId: u.id,
+          title: 'Restock Request',
+          body: `${data.requestedByName} requested ${data.requestedQty} units of ${data.itemName}.`,
+          message: `${data.requestedByName} requested ${data.requestedQty} units of ${data.itemName}.`,
+          type: 'inventory',
+          read: false,
+          metadata: { requestId: docRef.id, itemId: data.itemId, itemName: data.itemName },
+          createdAt: Timestamp.now(),
+        });
+      });
+      await batch.commit();
+    }
+    return docRef.id;
+  },
+
+  async getRestockRequests(workshopId: string, status?: string): Promise<RestockRequest[]> {
+    const constraints: QueryConstraint[] = [
+      where('workshopId', '==', workshopId),
+      orderBy('requestedAt', 'desc'),
+    ];
+    if (status) constraints.push(where('status', '==', status));
+    const q = query(collection(db, 'restockRequests'), ...constraints);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+      requestedAt: d.data().requestedAt?.toDate() || new Date(),
+      reviewedAt: d.data().reviewedAt?.toDate(),
+    })) as RestockRequest[];
+  },
+
+  async approveRestockRequest(requestId: string, reviewerId: string, reviewerName: string): Promise<void> {
+    const reqRef = doc(db, 'restockRequests', requestId);
+    const reqSnap = await getDoc(reqRef);
+    if (!reqSnap.exists()) return;
+    const req = reqSnap.data() as RestockRequest;
+
+    // update item quantity
+    const itemRef = doc(db, 'inventory', req.itemId);
+    const itemSnap = await getDoc(itemRef);
+    if (itemSnap.exists()) {
+      const currentQty = itemSnap.data().quantity || 0;
+      await updateDoc(itemRef, { quantity: currentQty + req.requestedQty, updatedAt: Timestamp.now() });
+    }
+
+    // write stock transaction
+    await addDoc(collection(db, 'stockTransactions'), {
+      workshopId: req.workshopId,
+      itemId: req.itemId,
+      itemName: req.itemName,
+      type: 'stock_in',
+      quantity: req.requestedQty,
+      reason: `Restock approved by ${reviewerName}. Request: ${req.reason}`,
+      recordedBy: reviewerId,
+      recordedByName: reviewerName,
+      createdAt: Timestamp.now(),
+    });
+
+    // update request status
+    await updateDoc(reqRef, {
+      status: 'approved',
+      reviewedBy: reviewerId,
+      reviewedByName: reviewerName,
+      reviewedAt: Timestamp.now(),
+    });
+
+    // notify requester
+    const notifRef = doc(collection(db, 'notifications'));
+    await setDoc(notifRef, {
+      userId: req.requestedBy,
+      title: 'Restock Approved',
+      body: `Your restock request for ${req.itemName} (${req.requestedQty} units) was approved.`,
+      message: `Your restock request for ${req.itemName} (${req.requestedQty} units) was approved.`,
+      type: 'inventory',
+      read: false,
+      metadata: { requestId, itemId: req.itemId },
+      createdAt: Timestamp.now(),
+    });
+  },
+
+  async rejectRestockRequest(requestId: string, reviewerId: string, reviewerName: string, rejectionReason: string): Promise<void> {
+    const reqRef = doc(db, 'restockRequests', requestId);
+    const reqSnap = await getDoc(reqRef);
+    if (!reqSnap.exists()) return;
+    const req = reqSnap.data() as RestockRequest;
+
+    await updateDoc(reqRef, {
+      status: 'rejected',
+      reviewedBy: reviewerId,
+      reviewedByName: reviewerName,
+      reviewedAt: Timestamp.now(),
+      rejectionReason,
+    });
+
+    // notify requester
+    const notifRef = doc(collection(db, 'notifications'));
+    await setDoc(notifRef, {
+      userId: req.requestedBy,
+      title: 'Restock Request Rejected',
+      body: `Your restock request for ${req.itemName} was rejected. Reason: ${rejectionReason}`,
+      message: `Your restock request for ${req.itemName} was rejected. Reason: ${rejectionReason}`,
+      type: 'inventory',
+      read: false,
+      metadata: { requestId, itemId: req.itemId },
+      createdAt: Timestamp.now(),
     });
   },
 

@@ -262,11 +262,32 @@ export interface StockTransaction {
   id: string;
   workshopId: string;
   itemId: string;
+  itemName?: string;
   type: 'stock_in' | 'stock_out';
   quantity: number;
   reason: string;
   approvedBy?: string;
+  recordedBy?: string;
+  recordedByName?: string;
   createdAt: Date;
+}
+
+export interface RestockRequest {
+  id: string;
+  workshopId: string;
+  itemId: string;
+  itemName: string;
+  currentQty: number;
+  requestedQty: number;
+  reason: string;
+  requestedBy: string;
+  requestedByName: string;
+  requestedAt: Date;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: Date;
+  rejectionReason?: string;
 }
 
 export interface MarketplaceProduct {

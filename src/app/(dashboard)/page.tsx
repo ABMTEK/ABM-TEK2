@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { firebaseService } from "@/services/firebaseService";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
-import { User, Job, Invoice, Vehicle } from "@/types";
+import { User, Job, Invoice, Vehicle, RestockRequest } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export default function DashboardPage() {
     const [technicians, setTechnicians] = useState<User[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [restockRequests, setRestockRequests] = useState<RestockRequest[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [dateRange, setDateRange] = useState({
@@ -65,11 +66,12 @@ export default function DashboardPage() {
             try {
                 const workshopIdToFetch = isSuperAdmin && !user.workshopId ? undefined : user.workshopId;
 
-                const [jobsData, invoicesData, inventoryData, usersData] = await Promise.all([
+                const [jobsData, invoicesData, inventoryData, usersData, restockData] = await Promise.all([
                     firebaseService.getJobs(undefined, workshopIdToFetch),
                     firebaseService.getInvoices(undefined, workshopIdToFetch),
                     firebaseService.getInventoryItems(workshopIdToFetch),
-                    firebaseService.getUsersByWorkshop(workshopIdToFetch)
+                    firebaseService.getUsersByWorkshop(workshopIdToFetch),
+                    workshopIdToFetch ? firebaseService.getRestockRequests(workshopIdToFetch, 'pending') : Promise.resolve([]),
                 ]);
 
                 const vehiclesPromises = usersData.map(u => firebaseService.getVehicles(u.id));
@@ -77,6 +79,7 @@ export default function DashboardPage() {
                 const flattenedVehicles = vehiclesDataNested.flat();
 
                 setJobs(jobsData);
+                setRestockRequests(restockData);
                 setInvoices(invoicesData);
                 setInventory(inventoryData);
                 setAllUsers(usersData);
@@ -149,8 +152,9 @@ export default function DashboardPage() {
         const activeJobs = filteredJobs.filter(j => j.status === 'repairing').length;
         const completedJobsCount = filteredJobs.filter(j => j.status === 'completed').length;
 
-        return { totalPaid, outstanding, pendingCount, lowStockCount, pendingJobs, activeJobs, completedJobsCount };
-    }, [filteredInvoices, invoices, inventory, filteredJobs, dateRange]);
+        const pendingRestockCount = restockRequests.length;
+        return { totalPaid, outstanding, pendingCount, lowStockCount, pendingJobs, activeJobs, completedJobsCount, pendingRestockCount };
+    }, [filteredInvoices, invoices, inventory, filteredJobs, dateRange, restockRequests]);
 
     const getCustomerName = (userId: string) => {
         const u = allUsers.find(u => u.id === userId);
@@ -312,12 +316,13 @@ export default function DashboardPage() {
             </div>
 
             {/* Core Summary Cards - Financials & Inventory */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
                 {[
                     { label: "Total Paid", value: `₦${filteredCoreStats.totalPaid.toLocaleString()}`, from: "#16A34A", to: "#15803d" },
                     { label: "Outstanding", value: `₦${filteredCoreStats.outstanding.toLocaleString()}`, from: "#E87C2B", to: "#c96a1f" },
                     { label: "Pending Invoices", value: filteredCoreStats.pendingCount, from: "#2563eb", to: "#1d4ed8", href: "/finance/invoices?payment=pending" },
                     { label: "Low Stock", value: filteredCoreStats.lowStockCount, from: "#DC2626", to: "#b91c1c", href: "/inventory" },
+                    { label: "Restock Requests", value: filteredCoreStats.pendingRestockCount, from: "#7c3a1e", to: "#E87C2B", href: "/inventory?tab=requests" },
                 ].map((stat, i) => (
                     <Card
                         key={i}
