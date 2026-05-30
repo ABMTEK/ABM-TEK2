@@ -186,7 +186,6 @@ export const firebaseService = {
     if (workshopId) {
       constraints.push(where('workshopId', '==', workshopId));
     }
-    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, 'invoices'), ...constraints);
     const snapshot = await getDocs(q);
@@ -546,7 +545,6 @@ export const firebaseService = {
     if (userId) {
       constraints.push(where('userId', '==', userId));
     }
-    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, 'orders'), ...constraints);
     const snapshot = await getDocs(q);
@@ -671,7 +669,6 @@ export const firebaseService = {
     if (userId) {
       constraints.push(where('userId', '==', userId));
     }
-    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, 'quotes'), ...constraints);
     const snapshot = await getDocs(q);
@@ -776,7 +773,6 @@ export const firebaseService = {
     if (status && status.length > 0) {
       constraints.push(where('status', 'in', status));
     }
-    constraints.push(orderBy('createdAt', 'desc'));
 
     const q = query(collection(db, 'jobs'), ...constraints);
     const snapshot = await getDocs(q);
@@ -918,8 +914,7 @@ export const firebaseService = {
   async getStaffInvitations(workshopId: string): Promise<StaffInvitation[]> {
     const q = query(
       collection(db, 'staffInvitations'),
-      where('workshopId', '==', workshopId),
-      orderBy('createdAt', 'desc')
+      where('workshopId', '==', workshopId)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map((docSnap) => {
