@@ -75,6 +75,72 @@ const passwordResetTemplate = (name: string, resetLink: string) => emailWrapper(
   <p style="color: #999; font-size: 13px;">If you didn't request this, you can safely ignore this email. This link will expire in 1 hour.</p>
 `);
 
+const invoiceTemplate = (invoice: any) => {
+    const items = (invoice.items || []).map((item: any) => `
+        <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333">${item.description || '—'}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:center;font-size:14px;color:#555">${item.quantity || 1}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;color:#555">₦${(item.unitPrice || 0).toLocaleString()}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;font-weight:600;color:#111">₦${(item.total || 0).toLocaleString()}</td>
+        </tr>
+    `).join('');
+
+    return emailWrapper(`
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px">
+            <div>
+                <h1 style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#111;margin:0">INVOICE</h1>
+                <p style="font-size:13px;color:#999;margin:4px 0 0;font-family:monospace">#${invoice.zohoInvoiceNumber || invoice.id || ''}</p>
+            </div>
+            <div style="text-align:right">
+                <p style="font-size:13px;color:#555;margin:0">Date: <strong>${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) : '—'}</strong></p>
+                <p style="font-size:13px;color:#555;margin:4px 0 0">Status: <span style="background:${invoice.paymentStatus === 'paid' ? '#dcfce7' : '#fef3c7'};color:${invoice.paymentStatus === 'paid' ? '#16a34a' : '#92400e'};padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px;text-transform:uppercase">${invoice.paymentStatus || 'pending'}</span></p>
+            </div>
+        </div>
+
+        <div style="background:#f8f8f8;border-radius:8px;padding:16px;margin-bottom:24px">
+            <p style="margin:0;font-size:13px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Bill To</p>
+            <p style="margin:6px 0 0;font-size:16px;font-weight:700;color:#111">${invoice.customerName || '—'}</p>
+            ${invoice.carBrand ? `<p style="margin:2px 0 0;font-size:13px;color:#666">Vehicle: ${invoice.carBrand}</p>` : ''}
+            ${invoice.customerPhone ? `<p style="margin:2px 0 0;font-size:13px;color:#666">${invoice.customerPhone}</p>` : ''}
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+            <thead>
+                <tr style="border-bottom:2px solid #111">
+                    <th style="text-align:left;padding:8px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#999">Description</th>
+                    <th style="text-align:center;padding:8px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#999">Qty</th>
+                    <th style="text-align:right;padding:8px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#999">Unit Price</th>
+                    <th style="text-align:right;padding:8px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#999">Total</th>
+                </tr>
+            </thead>
+            <tbody>${items || '<tr><td colspan="4" style="padding:16px 0;color:#999;font-size:13px">No line items</td></tr>'}</tbody>
+        </table>
+
+        <div style="border-top:2px solid #111;padding-top:16px">
+            ${invoice.discount ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:14px;color:#666">Discount</span><span style="font-size:14px;color:#666">-₦${(invoice.discount||0).toLocaleString()}</span></div>` : ''}
+            ${invoice.vat ? `<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:14px;color:#666">VAT (${invoice.vatRate||7.5}%)</span><span style="font-size:14px;color:#666">₦${(invoice.vat||0).toLocaleString()}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #eee">
+                <span style="font-size:18px;font-weight:800;color:#111">TOTAL</span>
+                <span style="font-size:18px;font-weight:800;color:#111">₦${(invoice.total||0).toLocaleString()}</span>
+            </div>
+            ${(invoice.amountPaid || 0) > 0 ? `
+            <div style="display:flex;justify-content:space-between;margin-top:8px">
+                <span style="font-size:14px;color:#16a34a;font-weight:600">Amount Paid</span>
+                <span style="font-size:14px;color:#16a34a;font-weight:600">₦${(invoice.amountPaid||0).toLocaleString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px">
+                <span style="font-size:14px;color:#dc2626;font-weight:600">Balance Due</span>
+                <span style="font-size:14px;color:#dc2626;font-weight:600">₦${((invoice.total||0)-(invoice.amountPaid||0)).toLocaleString()}</span>
+            </div>` : ''}
+        </div>
+
+        <div style="background:#f8f8f8;border-radius:8px;padding:16px;margin-top:24px;text-align:center">
+            <p style="margin:0;font-size:13px;color:#555">Thank you for your business! For any questions, contact <strong>ABM-TEK Workshop</strong>.</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#999">📞 Contact us for any queries regarding this invoice</p>
+        </div>
+    `);
+};
+
 export const emailService = {
     async sendEmail(to: string, subject: string, html: string): Promise<boolean> {
         if (!RESEND_API_KEY) {
@@ -130,6 +196,15 @@ export const emailService = {
             to,
             'Reset Your ABM Password',
             passwordResetTemplate(name, resetLink)
+        );
+    },
+
+    async sendInvoiceEmail(to: string, invoice: any) {
+        const invoiceNum = invoice.zohoInvoiceNumber || invoice.id?.slice(0, 12) || 'Invoice';
+        return this.sendEmail(
+            to,
+            `Invoice ${invoiceNum} from ABM-TEK Workshop — ₦${(invoice.total || 0).toLocaleString()}`,
+            invoiceTemplate(invoice)
         );
     }
 };

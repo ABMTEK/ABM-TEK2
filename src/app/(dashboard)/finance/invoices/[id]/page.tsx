@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { Printer, CheckCircle, ArrowLeft, Pencil } from "lucide-react";
+import { Printer, CheckCircle, ArrowLeft, Pencil, Mail, MessageCircle, Download, Loader2 } from "lucide-react";
+import { emailService } from "@/services/emailService";
 import Link from "next/link";
 import { cn, numberToWords } from "@/lib/utils";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -35,6 +36,7 @@ export default function InvoiceDetailsPage() {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState("Transfer");
+    const [sendingEmail, setSendingEmail] = useState(false);
 
     useEffect(() => {
         const fetchInvoice = async () => {
@@ -70,8 +72,45 @@ export default function InvoiceDetailsPage() {
     if (loading) return <PageLoader message="Loading invoice..." />;
     if (!invoice) return <div>Invoice not found</div>;
 
-    const handlePrint = () => {
+    const handlePrint = () => window.print();
+
+    const handleDownloadPDF = () => {
+        const originalTitle = document.title;
+        const invoiceNum = (invoice as any).zohoInvoiceNumber || invoice.id?.slice(0, 12) || 'invoice';
+        document.title = `Invoice-${invoiceNum}-ABMTEK`;
         window.print();
+        document.title = originalTitle;
+    };
+
+    const handleSendEmail = async () => {
+        const email = invoice.customerEmail;
+        if (!email) {
+            toast.error("No email address on file for this customer.");
+            return;
+        }
+        setSendingEmail(true);
+        try {
+            const sent = await emailService.sendInvoiceEmail(email, invoice);
+            if (sent) {
+                toast.success(`Invoice emailed to ${email}`);
+            } else {
+                toast.error("Email service not configured. Add NEXT_PUBLIC_RESEND_API_KEY to Vercel.");
+            }
+        } catch (e) {
+            toast.error("Failed to send email.");
+        } finally {
+            setSendingEmail(false);
+        }
+    };
+
+    const handleWhatsApp = () => {
+        const invoiceNum = (invoice as any).zohoInvoiceNumber || invoice.id?.slice(0, 12) || '';
+        const carBrand = (invoice as any).carBrand ? ` | ${(invoice as any).carBrand}` : '';
+        const balance = (invoice.total || 0) - (invoice.amountPaid || 0);
+        const status = invoice.paymentStatus === 'paid' ? '✅ PAID' : `⏳ Balance Due: ₦${balance.toLocaleString()}`;
+        const msg = `*ABM-TEK Workshop — Invoice*\n\nDear ${invoice.customerName || 'Customer'},\n\nPlease find your invoice details below:\n\n📄 Invoice: *${invoiceNum}*${carBrand}\n💰 Total: *₦${(invoice.total || 0).toLocaleString()}*\n${status}\n\nThank you for choosing ABM-TEK Workshop.\n📞 Contact us for any queries.`;
+        const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
     };
 
     const handleApprove = async () => {
@@ -127,18 +166,35 @@ export default function InvoiceDetailsPage() {
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Invoices
                 </Button>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    {/* WhatsApp */}
+                    <Button variant="outline" onClick={handleWhatsApp} className="text-green-600 border-green-300 hover:bg-green-50">
+                        <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                    </Button>
+
+                    {/* Email */}
+                    <Button variant="outline" onClick={handleSendEmail} disabled={sendingEmail} className="text-blue-600 border-blue-300 hover:bg-blue-50">
+                        {sendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                        {sendingEmail ? "Sending…" : "Email"}
+                    </Button>
+
+                    {/* PDF Download */}
+                    <Button variant="outline" onClick={handleDownloadPDF} className="text-gray-600">
+                        <Download className="mr-2 h-4 w-4" /> PDF
+                    </Button>
+
+                    {/* Edit */}
                     <Button variant="outline" asChild>
                         <Link href={`/finance/invoices/${invoice.id}/edit`}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit
                         </Link>
                     </Button>
-                    <Button variant="outline" onClick={handlePrint}>
-                        <Printer className="mr-2 h-4 w-4" /> Print
-                    </Button>
+
+                    {/* Approve */}
                     {(invoice.status === "draft" || invoice.invoiceStatus === "pending_approval") && (
-                        <Button onClick={() => invoice.status !== "draft" ? setShowApproveModal(true) : handleApprove()}>
-                            <CheckCircle className="mr-2 h-4 w-4" /> {invoice.status !== "draft" ? "Approve (Manual Override)" : "Approve Invoice"}
+                        <Button style={{ background: "#E87C2B" }} onClick={() => invoice.status !== "draft" ? setShowApproveModal(true) : handleApprove()}>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            {invoice.status !== "draft" ? "Approve Override" : "Approve Invoice"}
                         </Button>
                     )}
                 </div>

@@ -158,3 +158,13 @@
 .dark .text-gray-800       { color: #E0E0E0; }
 .dark .text-gray-700       { color: #CCCCCC; }
 .dark .text-gray-600       { color: #AAAAAA; }
+
+/* ─── Print / PDF styles ──────────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  aside, header, nav { display: none !important; }
+  .dark .bg-white, .dark .bg-gray-900 { background: white !important; }
+  .dark { color: black !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
