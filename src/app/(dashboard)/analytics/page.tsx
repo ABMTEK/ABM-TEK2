@@ -418,135 +418,142 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Total Revenue</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 leading-none">₦{analyticsStats.totalRevenue.toLocaleString()}</div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Completed Jobs</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 leading-none">{analyticsStats.completedCount}</div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Inventory Value</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900 leading-none">₦{analyticsStats.totalStockValue.toLocaleString()}</div>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { label: "Total Revenue", value: `₦${analyticsStats.totalRevenue.toLocaleString()}`, from: "#1e5f3a", to: "#16a34a" },
+                    { label: "Completed Jobs", value: analyticsStats.completedCount, from: "#1e3a5f", to: "#2563eb" },
+                    { label: "Completion Rate", value: `${Math.round(analyticsStats.targetPercentage)}%`, from: "#3a1e5f", to: "#7c3aeb" },
+                    { label: "Inventory Value", value: `₦${analyticsStats.totalStockValue.toLocaleString()}`, from: "#7c3a1e", to: "#E87C2B" },
+                ].map((s, i) => (
+                    <Card key={i} className="border-0 shadow-sm" style={{ background: `linear-gradient(135deg,${s.from},${s.to})` }}>
+                        <CardContent className="p-4">
+                            <p className="text-xs font-medium uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.7)" }}>{s.label}</p>
+                            <p className="text-2xl font-bold text-white mt-1">{s.value}</p>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
             {/* Service & Brand Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Most Requested Issues */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 px-2 flex items-center gap-3">
-                        Most Requested
-                    </h3>
-                    <Card className="bg-white border-none shadow-sm flex flex-col gap-3 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Wrench className="h-5 w-5 text-orange-500" />Most Requested</h3>
+                    <Card className="bg-white dark:bg-gray-900 border-none shadow-sm p-6 space-y-3">
                         {analyticsStats.topIssuesByVolume.length === 0 ? (
-                            <p className="py-8 text-center text-gray-400 font-medium text-sm">No issue data available.</p>
-                        ) : (
-                            analyticsStats.topIssuesByVolume.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl">
-                                    <span className="font-semibold text-gray-700 capitalize text-sm">{item.issue}</span>
-                                    <Badge className="bg-gray-100 text-gray-700 border-none font-semibold text-[10px]">{item.count} Jobs</Badge>
+                            <p className="py-8 text-center text-gray-400 text-sm">No data yet.</p>
+                        ) : (() => {
+                            const max = analyticsStats.topIssuesByVolume[0]?.count || 1;
+                            return analyticsStats.topIssuesByVolume.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{item.issue}</span>
+                                        <span className="text-xs font-bold text-gray-500">{item.count} jobs</span>
+                                    </div>
+                                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${(item.count / max) * 100}%`, background: "#E87C2B" }} />
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </Card>
                 </div>
 
                 {/* Issues by Revenue */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 px-2 flex items-center gap-3">
-                        Top Revenue Jobs
-                    </h3>
-                    <Card className="bg-white border-none shadow-sm flex flex-col gap-3 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Wallet className="h-5 w-5 text-green-500" />Top Revenue Jobs</h3>
+                    <Card className="bg-white dark:bg-gray-900 border-none shadow-sm p-6 space-y-3">
                         {analyticsStats.topIssuesByRevenue.length === 0 ? (
-                            <p className="py-8 text-center text-gray-400 font-medium text-sm">No revenue data available.</p>
-                        ) : (
-                            analyticsStats.topIssuesByRevenue.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl">
-                                    <span className="font-semibold text-gray-700 capitalize text-sm">{item.issue}</span>
-                                    <span className="font-semibold text-gray-900 text-xs">₦{item.revenue.toLocaleString()}</span>
+                            <p className="py-8 text-center text-gray-400 text-sm">No data yet.</p>
+                        ) : (() => {
+                            const max = analyticsStats.topIssuesByRevenue[0]?.revenue || 1;
+                            return analyticsStats.topIssuesByRevenue.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-gray-700 dark:text-gray-300 capitalize text-sm">{item.issue}</span>
+                                        <span className="text-xs font-bold text-gray-500">₦{item.revenue.toLocaleString()}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${(item.revenue / max) * 100}%`, background: "#16a34a" }} />
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </Card>
                 </div>
 
                 {/* Brand Frequency */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 px-2 flex items-center gap-3">
-                        Most Repaired Brands
-                    </h3>
-                    <Card className="bg-white border-none shadow-sm flex flex-col gap-3 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Car className="h-5 w-5 text-blue-500" />Most Repaired Brands</h3>
+                    <Card className="bg-white dark:bg-gray-900 border-none shadow-sm p-6 space-y-3">
                         {analyticsStats.topBrands.length === 0 ? (
-                            <p className="py-8 text-center text-gray-400 font-medium text-sm">No vehicle data available.</p>
-                        ) : (
-                            analyticsStats.topBrands.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl">
-                                    <span className="font-semibold text-gray-700 text-sm uppercase">{item.brand}</span>
-                                    <Badge className="bg-blue-50 text-blue-700 border-none font-semibold text-[10px]">{item.count} Repairs</Badge>
+                            <p className="py-8 text-center text-gray-400 text-sm">No data yet.</p>
+                        ) : (() => {
+                            const max = analyticsStats.topBrands[0]?.count || 1;
+                            return analyticsStats.topBrands.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-gray-700 dark:text-gray-300 uppercase text-sm">{item.brand}</span>
+                                        <span className="text-xs font-bold text-gray-500">{item.count} repairs</span>
+                                    </div>
+                                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${(item.count / max) * 100}%`, background: "#2563eb" }} />
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </Card>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 px-2 flex items-center gap-3">
-                        Top Selling Parts
-                    </h3>
-                    <Card className="bg-white border-none shadow-sm flex flex-col gap-4 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><Package className="h-5 w-5 text-purple-500" />Top Selling Parts</h3>
+                    <Card className="bg-white dark:bg-gray-900 border-none shadow-sm p-6 space-y-4">
                         {analyticsStats.topSellingParts.length === 0 ? (
-                            <p className="py-8 text-center text-gray-400 font-medium">No part sales recorded.</p>
-                        ) : (
-                            analyticsStats.topSellingParts.map((part, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl hover:bg-gray-100 transition-colors">
-                                    <div>
-                                        <p className="font-bold text-gray-900 leading-tight">{part.name}</p>
-                                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">Quantity: {part.quantity}</p>
+                            <p className="py-8 text-center text-gray-400">No part sales recorded.</p>
+                        ) : (() => {
+                            const max = analyticsStats.topSellingParts[0]?.quantity || 1;
+                            return analyticsStats.topSellingParts.map((part, idx) => (
+                                <div key={idx} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
+                                            <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{part.name}</span>
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-500">{part.quantity} units</span>
                                     </div>
-                                    {/* Rank removed */}
+                                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full bg-purple-500" style={{ width: `${(part.quantity / max) * 100}%` }} />
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </Card>
                 </div>
 
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900 px-2 flex items-center gap-3">
-                        Top Revenue Parts
-                    </h3>
-                    <Card className="bg-white border-none shadow-sm flex flex-col gap-4 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><DollarSign className="h-5 w-5 text-amber-500" />Top Revenue Parts</h3>
+                    <Card className="bg-white dark:bg-gray-900 border-none shadow-sm p-6 space-y-4">
                         {analyticsStats.topRevenueParts.length === 0 ? (
-                            <p className="py-8 text-center text-gray-400 font-medium">No revenue from parts recorded.</p>
-                        ) : (
-                            analyticsStats.topRevenueParts.map((part, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl hover:bg-gray-100 transition-colors">
-                                    <div>
-                                        <p className="font-bold text-gray-900 leading-tight">{part.name}</p>
-                                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">Revenue: ₦{part.revenue.toLocaleString()}</p>
+                            <p className="py-8 text-center text-gray-400">No revenue from parts recorded.</p>
+                        ) : (() => {
+                            const max = analyticsStats.topRevenueParts[0]?.revenue || 1;
+                            return analyticsStats.topRevenueParts.map((part, idx) => (
+                                <div key={idx} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
+                                            <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{part.name}</span>
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-500">₦{part.revenue.toLocaleString()}</span>
                                     </div>
-                                    {/* Rank removed */}
+                                    <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full bg-amber-500" style={{ width: `${(part.revenue / max) * 100}%` }} />
+                                    </div>
                                 </div>
-                            ))
-                        )}
+                            ));
+                        })()}
                     </Card>
                 </div>
             </div>
