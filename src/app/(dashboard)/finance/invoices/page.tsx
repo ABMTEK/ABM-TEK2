@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { firebaseService } from "@/services/firebaseService";
@@ -30,7 +30,7 @@ function getDisplayStatus(inv: Invoice): { label: string; style: string } {
     return { label: ps || s || "Pending", style: "bg-amber-100 text-amber-700 border-amber-200" };
 }
 
-export default function InvoicesPage() {
+function InvoicesPage() {
     const router = useRouter();
     const { user } = useAuthStore();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -190,5 +190,13 @@ export default function InvoicesPage() {
             </div>
             <p className="text-xs text-gray-400 text-center">{filtered.length} of {invoices.length} invoices shown</p>
         </div>
+    );
+}
+
+export default function InvoicesPageWrapper() {
+    return (
+        <Suspense fallback={<PageLoader message="Loading invoices..." />}>
+            <InvoicesPage />
+        </Suspense>
     );
 }

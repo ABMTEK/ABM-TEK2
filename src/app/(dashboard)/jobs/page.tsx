@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { firebaseService } from "@/services/firebaseService";
@@ -28,7 +28,7 @@ const STATUS_TABS = [
 
 const JOB_TYPES = ["all", "service", "repair", "complaint", "tow", "service_and_repair"];
 
-export default function JobsPage() {
+function JobsPage() {
     const nextRouter = useRouter();
     const { user } = useAuthStore();
     const [jobs, setJobs] = useState<Job[]>([]);
@@ -267,5 +267,13 @@ export default function JobsPage() {
 
             <p className="text-xs text-gray-400 text-center">{filteredJobs.length} of {jobs.length} jobs shown</p>
         </div>
+    );
+}
+
+export default function JobsPageWrapper() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" /></div>}>
+            <JobsPage />
+        </Suspense>
     );
 }
