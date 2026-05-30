@@ -162,9 +162,38 @@
 /* ─── Print / PDF styles ──────────────────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
-  body { background: white !important; color: black !important; }
-  aside, header, nav { display: none !important; }
-  .dark .bg-white, .dark .bg-gray-900 { background: white !important; }
-  .dark { color: black !important; }
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Force white background and black text everywhere */
+  *, *::before, *::after {
+    background: white !important;
+    color: black !important;
+    border-color: #e5e5e5 !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide sidebar, header, nav */
+  aside, header, nav,
+  [class*="no-print"],
+  [class*="sidebar"] { display: none !important; }
+
+  /* Reset body */
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* Keep specific accent colors */
+  .text-red-500, .text-red-600 { color: #dc2626 !important; }
+  .text-green-600, .text-green-700 { color: #16a34a !important; }
+  .text-amber-600, .text-amber-700 { color: #d97706 !important; }
+
+  /* Invoice card should be clean white */
+  .shadow-lg, .shadow-sm, .shadow-md { box-shadow: none !important; }
+  .rounded-xl, .rounded-2xl, .rounded-lg { border-radius: 8px !important; }
+
+  /* Page breaks */
+  table { page-break-inside: avoid; }
 }
