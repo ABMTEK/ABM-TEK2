@@ -23,8 +23,12 @@ import {
     CheckCircle2,
     Filter,
     ArrowUpRight,
-    Calendar
+    Calendar,
+    Search,
+    FileText,
+    Clock,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -135,13 +139,17 @@ export default function FinanceDashboard() {
         return "bg-gray-100 text-gray-800 border-gray-200";
     };
 
+    const [search, setSearch] = useState("");
+
+    const collectionRate = stats.invoiced > 0 ? Math.round((stats.paid / stats.invoiced) * 100) : 0;
+
     if (loading) return <PageLoader message="Loading finance records..." />;
 
     return (
-        <div className="space-y-8 pt-8">
+        <div className="space-y-8 pt-8 pb-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-8">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900">Finance Dashboard</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Finance</h2>
                     <p className="text-gray-500">Overview of workshop's financial performance.</p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -197,38 +205,46 @@ export default function FinanceDashboard() {
             </div>
 
             {/* Stats Overview */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 px-8">
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Total Invoiced</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">₦{stats.invoiced.toLocaleString()}</div>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8">
+                {[
+                    { label: "Total Invoiced", value: `₦${stats.invoiced.toLocaleString()}`, from: "#1e3a5f", to: "#2563eb" },
+                    { label: "Total Collected", value: `₦${stats.paid.toLocaleString()}`, from: "#1e5f3a", to: "#16a34a" },
+                    { label: "Outstanding", value: `₦${stats.outstanding.toLocaleString()}`, from: "#7c3a1e", to: "#E87C2B" },
+                    { label: "Collection Rate", value: `${collectionRate}%`, from: "#3a1e5f", to: "#7c3aeb" },
+                ].map((s, i) => (
+                    <Card key={i} className="border-0 shadow-sm" style={{ background: `linear-gradient(135deg,${s.from},${s.to})` }}>
+                        <CardContent className="p-4">
+                            <p className="text-xs font-medium uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.7)" }}>{s.label}</p>
+                            <p className="text-2xl font-bold text-white mt-1">{s.value}</p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
 
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Total Paid</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">₦{stats.paid.toLocaleString()}</div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">Outstanding</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">₦{stats.outstanding.toLocaleString()}</div>
-                    </CardContent>
-                </Card>
+            {/* Quick stats row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-8">
+                {[
+                    { label: "Total Invoices", value: invoices.length, icon: <FileText className="h-4 w-4" /> },
+                    { label: "Pending Payment", value: invoices.filter(i => i.paymentStatus === "pending").length, icon: <Clock className="h-4 w-4" /> },
+                    { label: "Pending Quotes", value: stats.pendingQuotes, icon: <AlertCircle className="h-4 w-4" /> },
+                    { label: "Draft Invoices", value: stats.draftInvoices, icon: <Wallet className="h-4 w-4" /> },
+                ].map((s, i) => (
+                    <Card key={i} className="bg-white dark:bg-gray-900 border shadow-sm">
+                        <CardContent className="p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs text-gray-500 font-medium">{s.label}</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{s.value}</p>
+                            </div>
+                            <div className="text-gray-300 dark:text-gray-600">{s.icon}</div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
             {/* Tabs & Table */}
             <div className="space-y-4">
-                <div className="flex items-center gap-4 border-b px-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-8">
+                    <div className="flex items-center gap-4 border-b w-full sm:w-auto">
                     <button
                         onClick={() => setActiveTab("invoices")}
                         className={cn(
@@ -251,6 +267,16 @@ export default function FinanceDashboard() {
                     >
                         Recent Quotes
                     </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                            <Input placeholder="Search customer…" className="pl-9 w-56" value={search} onChange={e => setSearch(e.target.value)} />
+                        </div>
+                        <Button asChild style={{ background: "#E87C2B" }} size="sm">
+                            <Link href="/finance/invoices/new">+ New Invoice</Link>
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="bg-white border-y shadow-sm overflow-hidden w-full">
@@ -267,10 +293,10 @@ export default function FinanceDashboard() {
                         </TableHeader>
                         <TableBody>
                             {activeTab === "invoices" ? (
-                                stats.filteredInvoices.length === 0 ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No invoices found for this period</TableCell></TableRow>
+                                stats.filteredInvoices.filter(i => !search || i.customerName?.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-500">No invoices found</TableCell></TableRow>
                                 ) : (
-                                    stats.filteredInvoices.slice(0, 10).map((inv) => (
+                                    stats.filteredInvoices.filter(i => !search || i.customerName?.toLowerCase().includes(search.toLowerCase())).slice(0, 20).map((inv) => (
                                         <TableRow key={inv.id}>
                                             <TableCell className="font-medium text-gray-900 pl-8">{inv.id}</TableCell>
                                             <TableCell>{inv.customerName || "N/A"}</TableCell>
