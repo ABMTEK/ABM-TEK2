@@ -38,6 +38,11 @@ export default function InvoiceDetailsPage() {
     const [paymentMethod, setPaymentMethod] = useState("Transfer");
     const [sendingEmail, setSendingEmail] = useState(false);
 
+    // Inline line item editing
+    const [editingItems, setEditingItems] = useState(false);
+    const [draftItems, setDraftItems] = useState<Array<{description: string; quantity: number; unitPrice: number; total: number}>>([]);
+    const [savingItems, setSavingItems] = useState(false);
+
     useEffect(() => {
         const fetchInvoice = async () => {
             if (typeof id !== "string") return;
@@ -71,6 +76,51 @@ export default function InvoiceDetailsPage() {
 
     if (loading) return <PageLoader message="Loading invoice..." />;
     if (!invoice) return <div>Invoice not found</div>;
+
+    const handleSaveItems = async () => {
+        if (!invoice) return;
+        setSavingItems(true);
+        try {
+            const validItems = draftItems.filter(i => i.description.trim());
+            const subtotal = validItems.reduce((sum, i) => sum + i.total, 0);
+            const vat = Math.round(subtotal * (invoice.vatRate || 7.5) / 100);
+            const total = subtotal + vat - (invoice.discount || 0);
+            await firebaseService.updateInvoice(invoice.id, {
+                items: validItems,
+                subtotal,
+                vat,
+                total,
+            });
+            const updated = await firebaseService.getInvoice(invoice.id);
+            setInvoice(updated);
+            setEditingItems(false);
+            toast.success("Line items saved.");
+        } catch (e) {
+            toast.error("Failed to save items.");
+        } finally {
+            setSavingItems(false);
+        }
+    };
+
+    const startEditingItems = () => {
+        setDraftItems(
+            invoice?.items?.length
+                ? invoice.items.map(i => ({ description: i.description, quantity: i.quantity, unitPrice: i.unitPrice, total: i.total }))
+                : [{ description: "", quantity: 1, unitPrice: 0, total: 0 }]
+        );
+        setEditingItems(true);
+    };
+
+    const updateDraftItem = (index: number, field: string, value: string | number) => {
+        setDraftItems(prev => prev.map((item, i) => {
+            if (i !== index) return item;
+            const updated = { ...item, [field]: value };
+            if (field === 'quantity' || field === 'unitPrice') {
+                updated.total = Number(updated.quantity) * Number(updated.unitPrice);
+            }
+            return updated;
+        }));
+    };
 
     const handlePrint = () => window.print();
 
@@ -293,30 +343,90 @@ export default function InvoiceDetailsPage() {
                     </div>
 
                     {/* Items Table */}
-                    <div className="space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
-                        <div className="border rounded-xl overflow-hidden shadow-sm">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                        <th className="py-4 px-6 text-left font-semibold text-gray-700">Description</th>
-                                        <th className="py-4 px-6 text-center font-semibold text-gray-700 w-24">Quantity</th>
-                                        <th className="py-4 px-6 text-right font-semibold text-gray-700 w-32">Unit Price</th>
-                                        <th className="py-4 px-6 text-right font-semibold text-gray-700 w-32">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {invoice.items.map((item, index) => (
-                                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="py-4 px-6 text-gray-800">{item.description}</td>
-                                            <td className="py-4 px-6 text-center text-gray-600">{item.quantity}</td>
-                                            <td className="py-4 px-6 text-right text-gray-600">₦{item.unitPrice.toLocaleString()}</td>
-                                            <td className="py-4 px-6 text-right font-medium text-gray-900">₦{item.total.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
+                            {!editingItems && (
+                                <Button variant="ghost" size="sm" className="no-print text-xs" onClick={startEditingItems}>
+                                    <Pencil className="h-3 w-3 mr-1" /> {invoice.items?.length ? "Edit Items" : "Add Items"}
+                                </Button>
+                            )}
                         </div>
+
+                        {editingItems ? (
+                            <div className="border rounded-xl overflow-hidden shadow-sm no-print">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="py-3 px-4 text-left font-semibold text-gray-700">Description</th>
+                                            <th className="py-3 px-4 text-center font-semibold text-gray-700 w-24">Qty</th>
+                                            <th className="py-3 px-4 text-right font-semibold text-gray-700 w-32">Unit Price (₦)</th>
+                                            <th className="py-3 px-4 text-right font-semibold text-gray-700 w-32">Total</th>
+                                            <th className="w-8"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {draftItems.map((item, i) => (
+                                            <tr key={i}>
+                                                <td className="px-3 py-2">
+                                                    <Input value={item.description} onChange={e => updateDraftItem(i, 'description', e.target.value)} placeholder="Service / Part description" className="h-8 text-sm" />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input type="number" value={item.quantity} onChange={e => updateDraftItem(i, 'quantity', parseFloat(e.target.value) || 0)} className="h-8 text-sm text-center w-20" min="1" />
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Input type="number" value={item.unitPrice} onChange={e => updateDraftItem(i, 'unitPrice', parseFloat(e.target.value) || 0)} className="h-8 text-sm text-right" />
+                                                </td>
+                                                <td className="px-4 py-2 text-right font-medium text-sm">₦{item.total.toLocaleString()}</td>
+                                                <td className="px-2 py-2">
+                                                    <button onClick={() => setDraftItems(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-600">✕</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+                                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => setDraftItems(prev => [...prev, { description: "", quantity: 1, unitPrice: 0, total: 0 }])}>
+                                        + Add Row
+                                    </Button>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setEditingItems(false)}>Cancel</Button>
+                                        <Button size="sm" onClick={handleSaveItems} disabled={savingItems} style={{ background: "#E87C2B" }}>
+                                            {savingItems && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Save Items
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="py-4 px-6 text-left font-semibold text-gray-700">Description</th>
+                                            <th className="py-4 px-6 text-center font-semibold text-gray-700 w-24">Quantity</th>
+                                            <th className="py-4 px-6 text-right font-semibold text-gray-700 w-32">Unit Price</th>
+                                            <th className="py-4 px-6 text-right font-semibold text-gray-700 w-32">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {!invoice.items?.length ? (
+                                            <tr>
+                                                <td colSpan={4} className="py-8 text-center text-gray-400 text-sm">
+                                                    No line items. <button onClick={startEditingItems} className="text-orange-500 font-semibold hover:underline no-print">Click to add items</button>
+                                                </td>
+                                            </tr>
+                                        ) : invoice.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="py-4 px-6 text-gray-800">{item.description}</td>
+                                                <td className="py-4 px-6 text-center text-gray-600">{item.quantity}</td>
+                                                <td className="py-4 px-6 text-right text-gray-600">₦{item.unitPrice.toLocaleString()}</td>
+                                                <td className="py-4 px-6 text-right font-medium text-gray-900">₦{item.total.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Financial Summary */}
