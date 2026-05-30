@@ -379,17 +379,16 @@ export const firebaseService = {
   async getStockTransactions(workshopId: string, itemId?: string): Promise<StockTransaction[]> {
     const constraints: QueryConstraint[] = [
       where('workshopId', '==', workshopId),
-      orderBy('createdAt', 'desc'),
-      limit(50),
     ];
-    if (itemId) constraints.splice(1, 0, where('itemId', '==', itemId));
+    if (itemId) constraints.push(where('itemId', '==', itemId));
     const q = query(collection(db, 'stockTransactions'), ...constraints);
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({
       id: d.id,
       ...d.data(),
       createdAt: d.data().createdAt?.toDate() || new Date(),
-    })) as StockTransaction[];
+    })).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+       .slice(0, 50) as StockTransaction[];
   },
 
   async sendLowStockNotification(workshopId: string, itemName: string, quantity: number, minStockLevel: number, itemId: string): Promise<void> {
@@ -453,7 +452,6 @@ export const firebaseService = {
   async getRestockRequests(workshopId: string, status?: string): Promise<RestockRequest[]> {
     const constraints: QueryConstraint[] = [
       where('workshopId', '==', workshopId),
-      orderBy('requestedAt', 'desc'),
     ];
     if (status) constraints.push(where('status', '==', status));
     const q = query(collection(db, 'restockRequests'), ...constraints);
@@ -463,7 +461,7 @@ export const firebaseService = {
       ...d.data(),
       requestedAt: d.data().requestedAt?.toDate() || new Date(),
       reviewedAt: d.data().reviewedAt?.toDate(),
-    })) as RestockRequest[];
+    })).sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime()) as RestockRequest[];
   },
 
   async approveRestockRequest(requestId: string, reviewerId: string, reviewerName: string): Promise<void> {
