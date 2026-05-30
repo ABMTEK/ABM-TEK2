@@ -156,13 +156,13 @@ export default function InvoicesPage() {
                             return (
                                 <TableRow key={inv.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => router.push(`/finance/invoices/${inv.id}`)}>
                                     <TableCell className="font-mono text-sm font-bold pl-8 text-gray-900 dark:text-white">
-                                        {inv.zohoInvoiceNumber || inv.id?.slice(0, 12)}
+                                        {(inv as any).zohoInvoiceNumber || inv.id?.slice(0, 12)}
                                     </TableCell>
                                     <TableCell>
                                         <p className="font-semibold text-sm text-gray-900 dark:text-white">{inv.customerName || "—"}</p>
                                         {inv.customerEmail && <p className="text-xs text-gray-400">{inv.customerEmail}</p>}
                                     </TableCell>
-                                    <TableCell className="text-sm text-gray-500">{(inv as any).carBrand || "—"}</TableCell>
+                                    <TableCell className="text-sm text-gray-500">{(inv as any).carBrand || (inv as any).cf_car_brand || "—"}</TableCell>
                                     <TableCell className="text-sm text-gray-500">
                                         {inv.createdAt ? format(new Date(inv.createdAt), "MMM d, yyyy") : "—"}
                                     </TableCell>
