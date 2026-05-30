@@ -121,21 +121,29 @@ export default function DashboardPage() {
     }, [invoices, dateRange]);
 
     const filteredCoreStats = useMemo(() => {
+        const start = startOfDay(new Date(dateRange.start));
+        const end = endOfDay(new Date(dateRange.end));
+
         const totalPaid = invoices.reduce((acc, inv) => {
-            if (!inv.paymentHistory || !Array.isArray(inv.paymentHistory)) return acc;
-
-            const start = startOfDay(new Date(dateRange.start));
-            const end = endOfDay(new Date(dateRange.end));
-
-            const periodPayments = inv.paymentHistory.reduce((sum, p) => {
-                const pDate = p.date ? (p.date instanceof Date ? p.date : new Date(p.date)) : null;
-                if (pDate && isWithinInterval(pDate, { start, end })) {
-                    return sum + (p.amount || 0);
-                }
-                return sum;
-            }, 0);
-
-            return acc + periodPayments;
+            // Method 1: sum paymentHistory records in period
+            if (inv.paymentHistory && Array.isArray(inv.paymentHistory) && inv.paymentHistory.length > 0) {
+                return acc + inv.paymentHistory.reduce((sum, p) => {
+                    const pDate = p.date ? (p.date instanceof Date ? p.date : new Date(p.date)) : null;
+                    if (pDate && isWithinInterval(pDate, { start, end })) {
+                        return sum + (p.amount || 0);
+                    }
+                    return sum;
+                }, 0);
+            }
+            // Method 2: use amountPaid field (Zoho imports)
+            if (inv.amountPaid && inv.amountPaid > 0 && inv.createdAt && isWithinInterval(new Date(inv.createdAt), { start, end })) {
+                return acc + inv.amountPaid;
+            }
+            // Method 3: fully paid invoices with no history
+            if ((inv.paymentStatus === 'paid' || inv.invoiceStatus === 'settled') && inv.createdAt && isWithinInterval(new Date(inv.createdAt), { start, end })) {
+                return acc + (inv.total || 0);
+            }
+            return acc;
         }, 0);
 
         const approvedInvoices = filteredInvoices.filter(inv =>

@@ -95,16 +95,27 @@ export default function FinanceDashboard() {
         );
         const invoiced = approvedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
 
+        // Calculate collected: from paymentHistory if available, otherwise use amountPaid or full total for paid invoices
         const paid = invoices.reduce((acc, inv) => {
-            if (!inv.paymentHistory || !Array.isArray(inv.paymentHistory)) return acc;
-
-            return acc + inv.paymentHistory.reduce((pSum, p) => {
-                const pDate = p.date ? (p.date instanceof Date ? p.date : new Date(p.date)) : null;
-                if (pDate && isInRange(pDate)) {
-                    return pSum + (p.amount || 0);
-                }
-                return pSum;
-            }, 0);
+            // Method 1: sum from paymentHistory records
+            if (inv.paymentHistory && Array.isArray(inv.paymentHistory) && inv.paymentHistory.length > 0) {
+                return acc + inv.paymentHistory.reduce((pSum, p) => {
+                    const pDate = p.date ? (p.date instanceof Date ? p.date : new Date(p.date)) : null;
+                    if (pDate && isInRange(pDate)) {
+                        return pSum + (p.amount || 0);
+                    }
+                    return pSum;
+                }, 0);
+            }
+            // Method 2: use amountPaid field directly (Zoho imports)
+            if (inv.amountPaid && inv.amountPaid > 0 && isInRange(inv.createdAt)) {
+                return acc + inv.amountPaid;
+            }
+            // Method 3: if status is paid and no history, count full total
+            if ((inv.paymentStatus === 'paid' || inv.invoiceStatus === 'settled') && isInRange(inv.createdAt)) {
+                return acc + (inv.total || 0);
+            }
+            return acc;
         }, 0);
 
         const outstanding = invoiced - paid;
